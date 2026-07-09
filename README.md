@@ -16,6 +16,7 @@ Most of this training happened the way IT training usually does — simulators f
 - Cisco switching and routing in Packet Tracer — VLANs, SSH, Spanning Tree Protocol, Inter-VLAN Routing (SVI and Router-on-a-Stick), Static Routing
 - Cisco switching and routing on real hardware — a Cisco 1921 ISR router and Catalyst 3560-CX Layer 3 switch, console cable and all, covering NAT, SSH hardening, VLANs, DHCP, and an inter-VLAN ACL security policy
 - Firewall and UTM appliances on real hardware — Endian Firewall Community and a FortiGate 300D NGFW, covering zone-based segmentation, firewall policy, proxying, and web filtering
+- Wireless on real hardware — a Cisco Aironet 1815 Mobility Express AP built from a factory reset, covering the console day-0 wizard, employee WLAN, and a guest network with captive portal redirect
 - Structured incident troubleshooting — 5 detailed case studies plus a quick-reference guide spanning hardware, OS, networking, AD, and Cisco topics
 
 ---
@@ -28,7 +29,7 @@ This portfolio spans three separate environments, not one continuous setup:
 - **Native Windows Server machine** — Active Directory through Group Policy was first completed on a separate physical machine, booted directly into Windows Server (not virtualized).
 - **VirtualBox** — the same AD-through-GPO scope was repeated here for additional practice. This is the round documented with screenshots in this repository.
 
-Separately, the Cisco Real Hardware and firewall labs below were built on their own dedicated physical devices — a router, a switch, and two firewall appliances — outside of any of the three environments above.
+Separately, the Cisco Real Hardware, firewall, and wireless labs below were built on their own dedicated physical devices — a router, a switch, two firewall appliances, and an access point — outside of any of the three environments above.
 
 ---
 
@@ -41,7 +42,8 @@ Separately, the Cisco Real Hardware and firewall labs below were built on their 
 | 3 | [Cisco Real Hardware](Cisco_Real_Hardware/) | 2 volumes — Cisco 1921 ISR router baseline, Catalyst 3560-CX VLANs/DHCP/ACL security | ✅ Complete |
 | 4 | [Endian Firewall Lab](Endian_Firewall_Lab/) | Real-hardware UTM firewall — RED/GREEN segmentation, rule ordering, proxy, web filtering | ✅ Complete |
 | 5 | [FortiGate 300D Hardware Lab](FortiGate-300D-Hardware-Lab/) | Real-hardware NGFW — GUI-based interfaces, static routing, firewall policy with NAT, DHCP | ✅ Complete |
-| 6 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
+| 6 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
+| 7 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
 
 ---
 
@@ -93,6 +95,13 @@ Installed on a repurposed PC (Intel i3, 8GB RAM, dual Intel NICs for RED/GREEN),
 
 **[FortiGate 300D](FortiGate-300D-Hardware-Lab/)**
 A next-gen firewall configured entirely through the browser — LAN/WAN interface roles, a default static route, a firewall policy bundling access control and NAT together, and DHCP switched on for the internal segment. Written up as a direct comparison to the router-based CLI work above: same underlying concepts, different interface.
+
+---
+
+## Wireless — Real Hardware
+
+**[Cisco Aironet 1815 Mobility Express](Cisco_Aironet_1815_Lab/)**
+A Cisco Aironet 1815 brought up from a genuine factory reset, PoE-powered off the same switch used in the Cisco Real Hardware labs, and placed straight on the main lab network with no VLAN segmentation. Covers the console day-0 setup wizard, first GUI login, an employee WLAN, and a guest WLAN with a captive portal that redirects authenticated guests to a real landing page. Includes a still-open troubleshooting thread on a guest client losing access to the management GUI after switching back to the trusted SSID.
 
 ---
 
@@ -173,6 +182,7 @@ common scenarios from hardware fundamentals through Cisco routing.
 | **Cisco Switching & Routing** | VLANs, SVI, SSH, STP, Router-on-a-Stick, Static Routing, Extended ACLs |
 | **Cisco Real Hardware** | Cisco 1921 ISR, Catalyst 3560-CX, NAT overload, DHCP snooping, DAI, port security |
 | **Firewalls / UTM** | Endian Firewall Community, FortiGate/FortiOS, zone-based segmentation, HTTP proxy, web filtering |
+| **Wireless** | Cisco Aironet 1815 (Mobility Express), WLAN/SSID configuration, WPA2-Personal, guest networking, captive portal |
 | **Networking Fundamentals** | TCP/IP, OSI Model, Subnetting, Ethernet, Structured Cabling |
 | **Troubleshooting** | OSI layer-by-layer methodology, Windows Server, Cisco CLI, firewall GUIs |
 | **Tools** | Cisco Packet Tracer, VirtualBox, PuTTY, draw.io |
@@ -193,6 +203,8 @@ common scenarios from hardware fundamentals through Cisco routing.
 - Adding a new subnet behind a NAT router means the NAT ACL needs updating too — nothing warns you when it's incomplete, and the symptom (DHCP working, no internet) looks identical to several other faults
 - An extended ACL's implicit `deny ip any any` is invisible but always there — forgetting a trailing `permit` silently kills traffic that was never meant to be blocked
 - CLI and GUI firewalls are the same concepts wearing different skins — interface roles, static routes, and policy/NAT bundling transfer directly from router CLI work to a browser-based NGFW
+- A captive portal's self-signed certificate warning on a guest network isn't a fault — it's expected for an internal virtual gateway address unless a trusted certificate has been installed separately
+- Client-tracking features like Local Profiling on a guest WLAN aren't free — they can leave a client tagged in ways that affect its access even after it reconnects to a trusted network, which is worth testing for before relying on a guest/employee split for real isolation
 
 ---
 
