@@ -17,6 +17,7 @@ Most of this training happened the way IT training usually does — simulators f
 - Cisco switching and routing on real hardware — a Cisco 1921 ISR router and Catalyst 3560-CX Layer 3 switch, console cable and all, covering NAT, SSH hardening, VLANs, DHCP, and an inter-VLAN ACL security policy
 - Firewall and UTM appliances on real hardware — Endian Firewall Community and a FortiGate 300D NGFW, covering zone-based segmentation, firewall policy, proxying, and web filtering
 - Wireless on real hardware — a Cisco Aironet 1815 Mobility Express AP built from a factory reset, covering the console day-0 wizard, employee WLAN, and a guest network with captive portal redirect
+- Protocol analysis on live traffic — Wireshark captures of ARP resolution, ICMP TTL behaviour, the TCP three-way handshake, DNS over UDP, and Cisco switch MAC address learning, watched packet-by-packet rather than read about
 - Structured incident troubleshooting — 5 detailed case studies plus a quick-reference guide spanning hardware, OS, networking, AD, and Cisco topics
 
 ---
@@ -29,7 +30,7 @@ This portfolio spans three separate environments, not one continuous setup:
 - **Native Windows Server machine** — Active Directory through Group Policy was first completed on a separate physical machine, booted directly into Windows Server (not virtualized).
 - **VirtualBox** — the same AD-through-GPO scope was repeated here for additional practice. This is the round documented with screenshots in this repository.
 
-Separately, the Cisco Real Hardware, firewall, and wireless labs below were built on their own dedicated physical devices — a router, a switch, two firewall appliances, and an access point — outside of any of the three environments above.
+Separately, the Cisco Real Hardware, firewall, wireless, and protocol analysis labs below were built on their own dedicated physical devices — a router, a switch, two firewall appliances, an access point, and a live-captured switch/PC pair — outside of any of the three environments above.
 
 ---
 
@@ -43,7 +44,8 @@ Separately, the Cisco Real Hardware, firewall, and wireless labs below were buil
 | 4 | [Endian Firewall Lab](Endian_Firewall_Lab/) | Real-hardware UTM firewall — RED/GREEN segmentation, rule ordering, proxy, web filtering | ✅ Complete |
 | 5 | [FortiGate 300D Hardware Lab](FortiGate-300D-Hardware-Lab/) | Real-hardware NGFW — GUI-based interfaces, static routing, firewall policy with NAT, DHCP | ✅ Complete |
 | 6 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
-| 7 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
+| 7 | [Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/) | 6 live packet-capture labs — ARP resolution · ICMP TTL · TCP handshake · DNS/UDP · switch MAC learning | ✅ Complete |
+| 8 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
 
 ---
 
@@ -102,6 +104,17 @@ A next-gen firewall configured entirely through the browser — LAN/WAN interfac
 
 **[Cisco Aironet 1815 Mobility Express](Cisco_Aironet_1815_Lab/)**
 A Cisco Aironet 1815 brought up from a genuine factory reset, PoE-powered off the same switch used in the Cisco Real Hardware labs, and placed straight on the main lab network with no VLAN segmentation. Covers the console day-0 setup wizard, first GUI login, an employee WLAN, and a guest WLAN with a captive portal that redirects authenticated guests to a real landing page. Includes a still-open troubleshooting thread on a guest client losing access to the management GUI after switching back to the trusted SSID.
+
+---
+
+## Protocol Analysis — Wireshark
+
+**[Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/)** *(with Pragadeesh)*
+Six focused experiments watching the protocols above actually happen on the wire instead of on a whiteboard: an ARP broadcast resolving a MAC address before a single ping goes out, ICMP reply TTLs used to infer hop count across two destinations, the full TCP three-way handshake captured right before an HTTPS session starts, a DNS query and response riding UDP with no handshake at all, a side-by-side TCP vs UDP comparison, and a live Cisco switch MAC address table going from empty to populated the moment traffic starts flowing.
+
+![ARP request broadcast before ICMP ping](Wireshark_Traffic_Analysis/Screenshots/02_arp_request_frame16.png)
+
+![Switch MAC address table populated after ping](Wireshark_Traffic_Analysis/Screenshots/19_mac_table_after_ping.png)
 
 ---
 
@@ -183,9 +196,10 @@ common scenarios from hardware fundamentals through Cisco routing.
 | **Cisco Real Hardware** | Cisco 1921 ISR, Catalyst 3560-CX, NAT overload, DHCP snooping, DAI, port security |
 | **Firewalls / UTM** | Endian Firewall Community, FortiGate/FortiOS, zone-based segmentation, HTTP proxy, web filtering |
 | **Wireless** | Cisco Aironet 1815 (Mobility Express), WLAN/SSID configuration, WPA2-Personal, guest networking, captive portal |
+| **Protocol Analysis** | Wireshark, ARP resolution, ICMP/TTL, TCP three-way handshake, DNS over UDP, switch MAC learning |
 | **Networking Fundamentals** | TCP/IP, OSI Model, Subnetting, Ethernet, Structured Cabling |
 | **Troubleshooting** | OSI layer-by-layer methodology, Windows Server, Cisco CLI, firewall GUIs |
-| **Tools** | Cisco Packet Tracer, VirtualBox, PuTTY, draw.io |
+| **Tools** | Cisco Packet Tracer, VirtualBox, PuTTY, Wireshark, draw.io |
 
 ---
 
@@ -205,7 +219,8 @@ common scenarios from hardware fundamentals through Cisco routing.
 - CLI and GUI firewalls are the same concepts wearing different skins — interface roles, static routes, and policy/NAT bundling transfer directly from router CLI work to a browser-based NGFW
 - A captive portal's self-signed certificate warning on a guest network isn't a fault — it's expected for an internal virtual gateway address unless a trusted certificate has been installed separately
 - Client-tracking features like Local Profiling on a guest WLAN aren't free — they can leave a client tagged in ways that affect its access even after it reconnects to a trusted network, which is worth testing for before relying on a guest/employee split for real isolation
+- A device doesn't need an IP-to-MAC mapping handed to it — it broadcasts an ARP request the moment it needs one, and a switch builds its own MAC address table the same passive way, just by watching source addresses go by
 
 ---
 
-> 🔧 Actively built during a 60-Day IT Network & Hardware Training Journal at Vatanix Technologies, Trichy. Real hardware, real labs, real documentation — updated regularly.
+> 🔧 Built during a 60-Day IT Network & Hardware Training Journal, now continuing through a follow-on 45-Day Advanced Training Program at Vatanix Technologies, Trichy. Real hardware, real labs, real documentation — updated regularly.
