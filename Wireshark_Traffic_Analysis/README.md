@@ -19,7 +19,25 @@ Before PC1 could send a single ping, it had no idea which physical port PC2 live
 
 The interesting part is what happens *after*. PC1 doesn't repeat the ARP request for every subsequent ping — it caches the IP-to-MAC mapping the moment it learns it and just looks it up locally from then on. That's why the second, third, and fourth pings in a sequence are noticeably faster than the first: the discovery cost is paid exactly once, until the cache entry expires or gets cleared again.
 
-**Screenshots:** `Screenshots/01_arp_cache_cleared_ping.png` through `05_icmp_echo_reply_frame19.png`
+> ARP cache cleared, ping started from PowerShell
+
+![ARP cache cleared before ping](Screenshots/01_arp_cache_cleared_ping.png)
+
+> ARP Request — frame 16, broadcast asking who has 192.168.10.20
+
+![ARP request frame 16](Screenshots/02_arp_request_frame16.png)
+
+> ARP Reply — frame 17, PC2 answers with its MAC address
+
+![ARP reply frame 17](Screenshots/03_arp_reply_frame17.png)
+
+> ICMP Echo Request — frame 18, the actual ping going out
+
+![ICMP echo request frame 18](Screenshots/04_icmp_echo_request_frame18.png)
+
+> ICMP Echo Reply — frame 19, PC2 replies to the ping
+
+![ICMP echo reply frame 19](Screenshots/05_icmp_echo_reply_frame19.png)
 
 ## Lab 2 — Comparing ICMP behaviour across two public destinations
 
@@ -32,7 +50,13 @@ The interesting part is what happens *after*. PC1 doesn't repeat the ARP request
 
 Both replies started life at TTL 128 — Windows' default — but arrived with different values. That single-digit difference (118 vs 117) is a small but concrete proof that the two destinations sit behind a different number of router hops: every hop along the return path decrements TTL by exactly one, so the number that lands on my machine is really a hop-count fingerprint of the path taken.
 
-**Screenshots:** `Screenshots/06_ping_results_google_and_dns.png`, `07_wireshark_icmp_filter.png`
+> Ping results for google.com and 8.8.8.8, side by side
+
+![Ping results for google.com and 8.8.8.8](Screenshots/06_ping_results_google_and_dns.png)
+
+> Wireshark filtered on `icmp`, showing reply TTLs
+
+![Wireshark ICMP filter](Screenshots/07_wireshark_icmp_filter.png)
 
 ## Lab 3 — Watching the TCP three-way handshake before HTTPS
 
@@ -46,7 +70,17 @@ Both replies started life at TTL 128 — Windows' default — but arrived with d
 
 No webpage data moves until both sides have proven they can hear each other in both directions. The client's SYN carries its starting sequence number; the server's SYN-ACK does the same in reverse while confirming the client's; the final ACK closes the loop. Only after that three-step negotiation does the TLS Client Hello — the start of the actual HTTPS session — appear in the capture.
 
-**Screenshots:** `Screenshots/08_duckduckgo_browser_loaded.png` through `10_wireshark_tcp_handshake_filter.png`
+> duckduckgo.com loaded in the browser during capture
+
+![DuckDuckGo loaded in browser](Screenshots/08_duckduckgo_browser_loaded.png)
+
+> Supporting CLI view during the capture
+
+![CLI supporting view](Screenshots/09_cli_supporting_view.png)
+
+> Wireshark filtered on `tcp`, showing the SYN / SYN-ACK / ACK handshake
+
+![Wireshark TCP handshake filter](Screenshots/10_wireshark_tcp_handshake_filter.png)
 
 ## Lab 4 — DNS riding on UDP
 
@@ -62,7 +96,13 @@ No webpage data moves until both sides have proven they can hear each other in b
 
 A DNS lookup is about as simple as network conversations get — one small question, one small answer — so there's no real benefit to paying for a TCP handshake first. UDP just fires the query and waits for the reply, and the Transaction ID is what ties a specific answer back to its matching question if multiple lookups are in flight.
 
-**Screenshots:** `Screenshots/11_dns_flush_nslookup.png`, `12_wireshark_dns_udp_capture.png`
+> `ipconfig /flushdns` followed by `nslookup google.com`
+
+![DNS flush and nslookup](Screenshots/11_dns_flush_nslookup.png)
+
+> Wireshark capture of the DNS query and response over UDP
+
+![Wireshark DNS/UDP capture](Screenshots/12_wireshark_dns_udp_capture.png)
 
 ## Lab 5 — TCP vs UDP, side by side
 
@@ -79,7 +119,21 @@ A DNS lookup is about as simple as network conversations get — one small quest
 
 Seeing both protocols in the same capture window made the trade-off concrete rather than theoretical: TCP spends packets up front on reliability, UDP spends nothing and leaves reliability to whoever needs it.
 
-**Screenshots:** `Screenshots/13_nslookup_torproject.png` through `16_wireshark_tcp_https_torproject.png`
+> `nslookup torproject.org`
+
+![nslookup torproject.org](Screenshots/13_nslookup_torproject.png)
+
+> torproject.org loaded in the browser
+
+![torproject.org loaded in browser](Screenshots/14_torproject_browser_loaded.png)
+
+> Wireshark capture of the DNS/UDP lookup for torproject.org
+
+![Wireshark UDP DNS capture for torproject.org](Screenshots/15_wireshark_udp_dns_torproject.png)
+
+> Wireshark capture of the TCP/HTTPS session to torproject.org
+
+![Wireshark TCP HTTPS capture for torproject.org](Screenshots/16_wireshark_tcp_https_torproject.png)
 
 ## Lab 6 — Watching a Cisco switch learn MAC addresses live
 
@@ -92,7 +146,17 @@ Seeing both protocols in the same capture window made the trade-off concrete rat
 
 The table was empty before the ping and populated with two entries right after — the same two MAC addresses seen back in the Lab 1 ARP exchange. That's switch MAC learning in its plainest form: the switch doesn't need to be told which device sits on which port, it just watches the source MAC of frames as they arrive and builds the table from traffic alone. Both entries showed as `DYNAMIC`, meaning nobody configured them manually, and by default a Cisco switch will age out an unused dynamic entry after 300 seconds of silence from that address.
 
-**Screenshots:** `Screenshots/17_mac_table_before_ping.png` through `19_mac_table_after_ping.png`
+> MAC address table before the ping — empty
+
+![MAC table before ping](Screenshots/17_mac_table_before_ping.png)
+
+> Ping from PC1 to PC2
+
+![Ping from PC1 to PC2](Screenshots/18_ping_pc1_to_pc2.png)
+
+> MAC address table after the ping — both PC1 and PC2 learned dynamically
+
+![MAC table after ping](Screenshots/19_mac_table_after_ping.png)
 
 ## What I Learned
 
