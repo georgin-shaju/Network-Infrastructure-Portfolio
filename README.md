@@ -15,6 +15,7 @@ Most of this training happened the way IT training usually does — simulators f
 - Windows Server 2019 administration — Active Directory, DNS, DHCP, Group Policy, OU/User management
 - Cisco switching and routing in Packet Tracer — VLANs, SSH, Spanning Tree Protocol, Inter-VLAN Routing (SVI and Router-on-a-Stick), Static Routing
 - Cisco switching and routing on real hardware — a Cisco 1921 ISR router and Catalyst 3560-CX Layer 3 switch, console cable and all, covering NAT, SSH hardening, VLANs, DHCP, and an inter-VLAN ACL security policy
+- Layer 3 switching redundancy on real hardware — two Catalyst 3850s in a StackWise stack acting as the L3 gateway, with dual LACP EtherChannels, SPAN-based NOC traffic monitoring, and four real failover tests including a full active-member power-off
 - Firewall and UTM appliances on real hardware — Endian Firewall Community and a FortiGate 300D NGFW, covering zone-based segmentation, firewall policy, proxying, and web filtering
 - Firewall redundancy on real hardware — two FortiGate 300D units in an Active-Passive HA cluster, tested against real WAN-link and full-power failures rather than just configured and left alone
 - Wireless on real hardware — a Cisco Aironet 1815 Mobility Express AP built from a factory reset, covering the console day-0 wizard, employee WLAN, and a guest network with captive portal redirect
@@ -42,12 +43,13 @@ Separately, the Cisco Real Hardware, firewall, HA cluster, wireless, and protoco
 | 1 | [Windows Server & ESXi Lab](Windows_Server/) | 6 labs — ESXi setup · AD DS · DNS · DHCP · GPO · OU & User Management | ✅ Complete |
 | 2 | [Cisco Networking Labs](Cisco_Labs/) | 5 labs (Packet Tracer) — VLANs/SSH · STP · Inter-VLAN Routing (SVI + ROAS) · Static Routing | ✅ Complete |
 | 3 | [Cisco Real Hardware](Cisco_Real_Hardware/) | 2 volumes — Cisco 1921 ISR router baseline, Catalyst 3560-CX VLANs/DHCP/ACL security | ✅ Complete |
-| 4 | [Endian Firewall Lab](Endian_Firewall_Lab/) | Real-hardware UTM firewall — RED/GREEN segmentation, rule ordering, proxy, web filtering | ✅ Complete |
-| 5 | [FortiGate 300D Hardware Lab](FortiGate-300D-Hardware-Lab/) | Real-hardware NGFW — GUI-based interfaces, static routing, firewall policy with NAT, DHCP | ✅ Complete |
-| 6 | [FortiGate Active-Passive HA Deployment & Failover Testing](FortiGate_Active-Passive-HA-Failover/) | 2× FortiGate 300D Active-Passive HA cluster — dedicated heartbeat, WAN-link and power failure testing with validation matrix | ✅ Complete |
-| 7 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
-| 8 | [Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/) | 6 live packet-capture labs — ARP resolution · ICMP TTL · TCP handshake · DNS/UDP · switch MAC learning | ✅ Complete |
-| 9 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
+| 4 | [Cisco 3850 StackWise Lab](Cisco_3850_StackWise_Lab/) | Real-hardware Catalyst 3850 StackWise pair as L3 gateway — dual LACP EtherChannels, SPAN-based NOC monitoring, 4 live failover tests incl. full active-member power-off | ✅ Complete |
+| 5 | [Endian Firewall Lab](Endian_Firewall_Lab/) | Real-hardware UTM firewall — RED/GREEN segmentation, rule ordering, proxy, web filtering | ✅ Complete |
+| 6 | [FortiGate 300D Hardware Lab](FortiGate-300D-Hardware-Lab/) | Real-hardware NGFW — GUI-based interfaces, static routing, firewall policy with NAT, DHCP | ✅ Complete |
+| 7 | [FortiGate Active-Passive HA Deployment & Failover Testing](FortiGate_Active-Passive-HA-Failover/) | 2× FortiGate 300D Active-Passive HA cluster — dedicated heartbeat, WAN-link and power failure testing with validation matrix | ✅ Complete |
+| 8 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
+| 9 | [Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/) | 6 live packet-capture labs — ARP resolution · ICMP TTL · TCP handshake · DNS/UDP · switch MAC learning | ✅ Complete |
+| 10 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
 
 ---
 
@@ -87,6 +89,17 @@ Factory-reset 1921 built into a working internet gateway — WAN/LAN interfaces,
 A Catalyst 3560-CX takes over everything internal — four VLANs, inter-VLAN routing via SVIs, DHCP per department, an extended ACL policy isolating them from each other, and Layer 2 hardening (port security, DHCP snooping, DAI, BPDU Guard, storm control). Two real build issues and a subtle ACL-testing pitfall are documented in full, including a [dedicated troubleshooting write-up](Cisco_Real_Hardware/Vol_02_Enterprise_Switch/ACL_Troubleshooting.md).
 
 ![Full lab — router and switch stacked](Cisco_Real_Hardware/Vol_01_Router_Baseline/screenshots/hardware-full-lab-overview.jpg)
+
+---
+
+## Cisco 3850 StackWise Lab
+
+**[Cisco 3850 StackWise Real-Device Lab](Cisco_3850_StackWise_Lab/)**
+Two Catalyst 3850s cabled into a StackWise ring and put in place of a firewall as the Layer-3 gateway for two user VLANs, with the router carrying NAT/PAT since nothing downstream does firewalling anymore. Covers StackWise stack formation and priority election, dual LACP EtherChannels (one uplink to the router side, one downlink to the access switch), a deliberately narrow VLAN 1 transit design, and a SPAN port feeding a Wireshark station set up to watch VLAN10 traffic the way a small NOC would — including the fact that a TLS ClientHello's SNI field names the destination in plaintext even before any decryption.
+
+Four real resiliency tests were run against the finished build rather than just documented as configuration: an uplink EtherChannel member failure, a downlink EtherChannel member failure, a full power-off of the Active stack member, and a StackWise ring link failure — each with a "before" baseline, the fault introduced, and an "after" check against live pings. The active-member power-off is the standout result: the whole physical unit went dark, and three concurrent pings across different destinations didn't lose a single packet, with the console session carrying the same hostname straight through the transition.
+
+![Baseline verification — show switch, stack-ports, and etherchannel summary before testing](Cisco_3850_StackWise_Lab/Screenshots/08-baseline-hostname-switch-etherchannel.png)
 
 ---
 
@@ -215,6 +228,7 @@ common scenarios from hardware fundamentals through Cisco routing.
 | **Windows Server** | Windows Server 2019, AD DS, DNS, DHCP, GPO, Domain Controller |
 | **Cisco Switching & Routing** | VLANs, SVI, SSH, STP, Router-on-a-Stick, Static Routing, Extended ACLs |
 | **Cisco Real Hardware** | Cisco 1921 ISR, Catalyst 3560-CX, NAT overload, DHCP snooping, DAI, port security |
+| **Cisco StackWise & EtherChannel** | Catalyst 3850 StackWise stacking, LACP EtherChannel, SPAN traffic mirroring, VLAN1 transit design, stack-power ring |
 | **Firewalls / UTM** | Endian Firewall Community, FortiGate/FortiOS, zone-based segmentation, HTTP proxy, web filtering |
 | **High Availability** | FortiGate FGCP Active-Passive clustering, heartbeat/monitor interfaces, override priority election, config sync vs. session pickup |
 | **Wireless** | Cisco Aironet 1815 (Mobility Express), WLAN/SSID configuration, WPA2-Personal, guest networking, captive portal |
@@ -244,6 +258,8 @@ common scenarios from hardware fundamentals through Cisco routing.
 - A device doesn't need an IP-to-MAC mapping handed to it — it broadcasts an ARP request the moment it needs one, and a switch builds its own MAC address table the same passive way, just by watching source addresses go by
 - HA "failover" and "failback" are not the same event and shouldn't be measured as if they were — a live unit losing one monitored link recovers faster than a unit rejoining after a full reboot, because the second case has real state to rebuild before it can be trusted with primary again
 - Config sync and session sync are two different guarantees on a FortiGate HA cluster — `Configuration Status: in-sync` only means policy matches between units, not that in-flight sessions would survive a failover; that second guarantee is controlled separately by session pickup
+- A StackWise stack's hostname belongs to the stack as a logical entity, not to whichever physical unit currently holds the Active role — powering off the Active member entirely didn't drop the console session, because the Standby member took over Active and kept answering under the same identity
+- "Zero dropped pings" during a failover test isn't the same claim as "zero downtime" — a `ping -t` at a one-second interval only rules out outages roughly that long or longer, so it's honest evidence against a user-visible outage, not proof of a perfectly instantaneous transition
 
 ---
 
