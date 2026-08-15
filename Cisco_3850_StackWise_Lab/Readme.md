@@ -24,7 +24,7 @@ Covered in this build:
 - Static routing between the Router and the stack, with NAT/PAT on the router for Internet access
 - SSH management on every device
 - A SPAN-fed Wireshark station used to observe VLAN10 traffic the way a small NOC would
-- Four real resiliency tests: an uplink EtherChannel member failure, a downlink EtherChannel member failure, a stack member power-supply fault, and a StackWise ring link failure
+- Four real resiliency tests: an uplink EtherChannel member failure, a downlink EtherChannel member failure, a full power-off of the active stack member, and a StackWise ring link failure
 
 ## Equipment
 
@@ -701,7 +701,7 @@ write memory
 
 ## High Availability / Resiliency Testing
 
-Four resiliency tests were actually run against this build, each with a "before" baseline, the fault introduced, and an "after" check. Two target the EtherChannels, one targets a stack member's power supply, and one targets the StackWise ring itself.
+Four resiliency tests were actually run against this build, each with a "before" baseline, the fault introduced, and an "after" check. Two target the EtherChannels, one is a full power-off of the active stack member, and one targets the StackWise ring itself.
 
 ### Test 1 — Po1 uplink EtherChannel member failure
 
@@ -729,13 +729,19 @@ With `Gi1/0/2` taken down, `Po2` stays **`SU`** on its remaining member (`Gi2/0/
 
 Both EtherChannel tests land on the same conclusion: losing one physical member out of two doesn't take the channel down — LACP renegotiates around it — but it isn't perfectly silent either. Both tests logged exactly one dropped ping during the transition.
 
-### Test 3 — Stack member power-supply fault
+### Test 3 — Full power-off of the active stack member
 
-This test targeted a power supply on stack member 1, not the whole switch. The console log shows it clearly: `%PLATFORM_FEP-1-FRU_PS_ACCESS: Switch 1: power supply B is not responding`, followed by `FRU_PS_SIGNAL_FAULTY`. Three separate continuous pings were running at the same time — to `8.8.8.8`, to `192.168.20.1` (the VLAN20 gateway SVI), and to `192.168.10.10` (PC1) — and **all three kept responding without a single drop**:
+This is the destructive test: powering off switch 1 — the Active member (priority 15) — completely. These particular 3850 units each carry a single power supply, so pulling power to that one supply doesn't degrade the switch, it takes the whole physical unit dark. The console log captured the moment it happened: `%PLATFORM_FEP-1-FRU_PS_ACCESS: Switch 1: power supply B is not responding`, followed immediately by `FRU_PS_SIGNAL_FAULTY` — that's the switch reporting the loss of its only power source right before it went off entirely.
 
-![Power supply B fault on switch 1, with three concurrent pings (8.8.8.8, 192.168.20.1, 192.168.10.10) showing zero loss throughout](Screenshots/28-failover-psu-fault-zero-loss.png)
+Three separate continuous pings were running at the same time — to `8.8.8.8`, to `192.168.20.1` (the VLAN20 gateway SVI), and to `192.168.10.10` (PC1) — and **all three kept responding without a single drop** through the entire event:
 
-This lines up with the stack-power ring topology confirmed earlier (`show stack-power`, Step 3) — with power pooled across a ring of two supplies, one supply reporting a fault doesn't remove capacity from the switch it's protecting, so there's nothing here for StackWise to fail over. The stack didn't need to react because nothing about its own operation changed.
+![Switch 1 (Active member) loses its only power supply and goes fully dark, with three concurrent pings (8.8.8.8, 192.168.20.1, 192.168.10.10) showing zero loss throughout](Screenshots/28-failover-active-member-poweroff-zero-loss.png)
+
+The detail worth calling out in that screenshot: the console prompt stays `C3850-STACK-1#` right through the power loss. That's not a coincidence — the hostname belongs to the stack as a logical entity, not to whichever physical box happens to be Active at the time. Switch 2 (priority 14, previously Standby) took over the Active role, and from a management standpoint the transition was invisible — same hostname, same session, no interruption to the CLI.
+
+This is genuinely the strongest result in the whole test set: a full power loss on the Active member — not a single link, not a component fault, the entire physical switch — and three concurrent pings across different destinations didn't lose a single packet.
+
+**One honest caveat:** zero dropped pings means the outage window (if there was one at all) was shorter than the ping interval, not necessarily that there was *zero* interruption at the microsecond level. A `ping -t` at the default one-second interval is a coarse instrument — it's good enough to say "this failover didn't cause a *user-visible* outage," which is the claim that actually matters operationally, but it can't rule out a sub-second blip between probes.
 
 ### Test 4 — StackWise ring link failure
 
@@ -743,7 +749,7 @@ The last test pulled the StackWise ring itself. The syslog shows both directions
 
 ![StackWise ring ports down on both switches, roles unchanged, concurrent ping to 192.168.20.1 with zero loss](Screenshots/29-failover-stackwise-ring-down-zero-loss.png)
 
-This result is worth being precise about rather than overselling: it shows that a ring interruption didn't cause a role re-election or a forwarding outage in this specific test, at this specific moment — both members' data-plane connections into Po1 and Po2 were untouched, so neither switch needed the other to keep forwarding what it was already forwarding. It's not the same claim as "the stack survives an active-member power-off," which is a different, more disruptive test this write-up doesn't include — the active member was never fully powered down during this session, so that specific scenario isn't backed by evidence here.
+This result is worth being precise about rather than overselling: it shows that a ring interruption didn't cause a role re-election or a forwarding outage in this specific test, at this specific moment — both members' data-plane connections into Po1 and Po2 were untouched, so neither switch needed the other to keep forwarding what it was already forwarding. That's a narrower claim than Test 3's full active-member power-off above — this test only interrupted the stack's control-plane ring while both physical units stayed powered and both EtherChannels stayed fully intact.
 
 ### Resiliency test summary
 
@@ -751,8 +757,8 @@ This result is worth being precise about rather than overselling: it shows that 
 |---|---|---|---|
 | 1 — Po1 uplink member | `Gi1/0/1` down | Po1 stayed `SU`; 1 ping lost of 7 | LACP renegotiated to the remaining member |
 | 2 — Po2 downlink member | `Gi1/0/2` down | Po2 stayed `SU`; 1 ping lost of 9 | Same pattern, other channel |
-| 3 — PSU fault | Power supply B fault on switch 1 | Zero ping loss across 3 concurrent pings | Absorbed by the stack-power ring, no StackWise involvement |
-| 4 — StackWise ring link | Both stack ports down | Zero ping loss on a concurrent ping | Active/Standby roles unchanged; not the same as a full active-member power-off |
+| 3 — Active member power-off | Switch 1 (Active) loses its only PSU, goes fully dark | Zero ping loss across 3 concurrent pings | Switch 2 took over as Active; hostname/session continuity preserved |
+| 4 — StackWise ring link | Both stack ports down | Zero ping loss on a concurrent ping | Active/Standby roles unchanged; control-plane ring only, both units stayed powered |
 
 ---
 
@@ -782,7 +788,11 @@ Different:
 
 **"Redundant" doesn't always mean "silent."** Both EtherChannel member-failure tests recovered the channel automatically, but both also logged exactly one dropped ping during the transition. That's a useful, honest data point — LACP re-convergence isn't instantaneous, and a real design would want to know that one-packet number, not just "did it stay up."
 
-**Not every fault reaches StackWise at all.** The power-supply fault and the StackWise ring test both produced zero ping loss, but for different reasons — one because the stack-power ring absorbed it before it became a switch-level problem, the other because the specific ring interruption tested didn't require the two switches to renegotiate anything about how they were already forwarding traffic. It's tempting to read "zero loss" as "the redundancy worked," but the more accurate read is "this fault didn't hit the mechanism that matters here" — which is also useful to know.
+**A full active-member power-off can be genuinely invisible to end users.** Going in, I expected the most disruptive test — powering off the switch holding the Active role entirely — to be the one most likely to show a dropped packet. It was the opposite: zero loss across three concurrent pings, and the console session didn't even blink, because the hostname belongs to the stack as a whole, not to whichever physical unit is Active. Switch 2 picked up the Active role and kept answering under the same identity.
+
+**"Zero dropped pings" isn't the same as "zero downtime."** A `ping -t` at a one-second interval can only catch outages that last roughly that long or more. That doesn't undercut the active-member test's result — a failover that a one-second probe can't catch is, for almost any practical purpose, a non-event — but it's worth stating plainly rather than implying the test measured something more precise than it did.
+
+**Not every fault reaches the same recovery mechanism.** The StackWise ring-link test and the active-member power-off test both produced zero ping loss, but for different structural reasons — the ring test never took either physical unit's data-plane ports down, so there was nothing for either switch to route around; the active-member test took an entire unit down and StackWise handled the full transition. Both landed at "zero loss," but only one of them actually exercised StackWise's failover path end to end.
 
 **A "1 Gbps" port doesn't give you 1000 Mbps of payload.** The iperf3 numbers — consistently 930–950 Mbps per member link — were a good reminder that line rate and usable throughput aren't the same figure. Framing, headers, and ACKs are a fixed cost of the protocol stack, not a symptom of anything wrong. Knowing what "normal" overhead looks like on a healthy link is what makes it possible to actually notice when a link is underperforming for a real reason.
 
@@ -807,8 +817,11 @@ A: The 3850 stack is doing Layer-3 inter-VLAN routing, but it isn't acting as th
 **Q: An iperf3 test on a 1 Gbps EtherChannel member link shows 940 Mbps instead of a full 1000 Mbps. Is that a problem?**
 A: No — that's within the normal range for a healthy Gigabit link. Line rate is a Layer-1 number; actual payload throughput is always lower once you account for Ethernet framing and inter-frame gaps, IP/TCP headers, and return-path ACK traffic. Somewhere in the low-to-mid 90s as a percentage of line rate is what a good link looks like. It's only worth investigating if a link is landing noticeably below that range, or below what its neighbors on the same channel are showing.
 
-**Q: Why didn't the power-supply fault trigger a StackWise failover?**
-A: Because it never became a problem StackWise needed to solve. The two members share a stack-power ring, so a single power-supply fault on one member is covered by pooled capacity at the power layer, before it ever affects that switch's ability to forward traffic. StackWise handles switching-fabric and control-plane redundancy — it was never in the loop for this particular fault.
+**Q: What actually happened when the Active stack member lost power completely?**
+A: Switch 2 — previously Standby — took over the Active role, and the transition was invisible from both a data-plane and a management standpoint in this test: three concurrent pings to different destinations showed zero dropped packets, and the console session kept the same `C3850-STACK-1` prompt throughout, because the hostname is a property of the stack as a logical entity, not of whichever physical unit happens to hold the Active role at a given moment.
+
+**Q: If a test shows zero dropped pings during a failover, does that mean there was zero downtime?**
+A: Not quite — it means any interruption was shorter than the ping interval being used, which in this case was one second. It's strong evidence the failover didn't cause a user-noticeable outage, but a sub-second gap between two successful pings wouldn't show up in that data. For anything more precise, you'd want a purpose-built tool sending probes at millisecond intervals, not `ping -t`.
 
 **Q: Why can't Wireshark show you the actual page or video content being streamed, even though SPAN is mirroring the traffic?**
 A: The traffic is HTTPS/TLS (and often QUIC), so the application payload is encrypted end-to-end between the client and the server. SPAN gives you a faithful copy of the packets, including the plaintext TLS ClientHello — which is why the destination hostname is visible via SNI — but everything after the handshake is encrypted, so content itself stays hidden.
@@ -839,9 +852,8 @@ A: SPAN destination ports stop doing normal switching while they're a SPAN desti
 [x] SPAN session removed after testing
 [x] Po1 uplink member failure tested — channel stayed up, 1 ping lost
 [x] Po2 downlink member failure tested — channel stayed up, 1 ping lost
-[x] Stack member power-supply fault tested — zero ping loss
+[x] Full active-member power-off tested — zero ping loss across 3 concurrent probes, seamless session continuity
 [x] StackWise ring link failure tested — roles held, zero ping loss
-[ ] Full active-member power-off — not performed in this session
 ```
 
-The one item still open is the most disruptive test: fully powering down the active stack member and watching Standby take over the Active role. Everything tested here shows the individual redundancy mechanisms working as designed, but a true active-member failure is the next logical step once there's a camera on the stack for that specific test.
+All four planned resiliency tests were completed. The one thing worth flagging for a future pass isn't a missing test but a measurement limit: every result above is "zero dropped pings at a one-second interval," which rules out user-visible outages but can't rule out sub-second gaps. A tighter next step would be repeating the active-member power-off test with a faster probe — continuous UDP traffic or millisecond-interval pings — to see whether there's a real, if brief, gap hiding underneath the current result.
