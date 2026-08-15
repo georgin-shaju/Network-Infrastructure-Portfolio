@@ -133,7 +133,7 @@ That's controlled separately, by session pickup — and in this cluster, it's ex
 ses_pickup: disable
 ```
 
-`ses_pickup: disable` means this cluster does not synchronize active sessions for stateful session continuity — established TCP/UDP connections would not be preserved across a failover. That matters for real traffic, but it's a separate claim from what the failover tests below actually measure. The tests use `ping -t`, and each ICMP echo request is independent — there's no single long-lived "session" for HA to pick up in the TCP/UDP sense. So the packet loss visible in those tests is primarily evidence of the **HA transition itself** — the brief window while the surviving or rejoining unit takes over forwarding — not evidence of session pickup specifically. Session pickup becomes the relevant factor if this lab were extended to test an established TCP connection (an SSH session, a file transfer) held open across the same failover; that's a natural next step, not something demonstrated here. Worth documenting on its own regardless, since `Configuration Status: in-sync` only confirms the two units agree on *policy* — it says nothing about session continuity, which is a materially different guarantee.
+`ses_pickup: disable` means this cluster does not synchronize active sessions for stateful session continuity — established TCP/UDP connections would not be preserved across a failover. That matters for real traffic, but it's a separate claim from what the failover tests below actually measure. The tests use `ping -t`, and each ICMP echo request is independent — there's no single long-lived "session" for HA to pick up in the TCP/UDP sense. So the packet loss visible in those tests is primarily evidence of the **HA transition itself** — the brief window while the surviving or rejoining unit takes over forwarding — not evidence of session pickup specifically. Worth documenting on its own regardless, since `Configuration Status: in-sync` only confirms the two units agree on *policy* — it says nothing about session continuity, which is a materially different guarantee. That gap between "ICMP recovers fast" and "a real stateful session recovers fast" didn't stay theoretical for long — see **Real-World Follow-Up** below, where testing it directly with a live call changed the picture considerably.
 
 ## Testing Failover — Twice, Two Different Ways
 
@@ -210,6 +210,30 @@ Laid out honestly, this lab didn't produce two comparable data points — it pro
 
 The headline comparison isn't "1 dropped ping vs. 5 dropped pings for the same kind of event" — it's that **failback (a unit rejoining and reclaiming primary after a full reboot) is measurably rougher than a live unit losing one monitored link**, and that the power-off failover itself is proven by the HA status log rather than by an isolated packet-loss count in this data set. Neither test produced a *prolonged* outage — that's the point of HA — but all four transitions produced real, measurable packet loss or a logged state change, and calling any of it "no outage" would overstate what the evidence shows.
 
+## Real-World Follow-Up — Testing a Live Microsoft Teams Call Across Failover
+
+Everything above is honest evidence, but it has a real limitation worth naming directly: a `ping -t` isn't how anyone actually uses a network. Employees don't sit there pinging the gateway all day, and they don't need to — the question that actually matters for a redundant firewall isn't "does ICMP recover," it's "does a real, in-progress conversation survive a failover without the person on the call noticing." So I went back and tested exactly that.
+
+With the cluster in the same state used throughout this lab — `ses_pickup: disable` — I put a Microsoft Teams call up and running across the connected PCs, then triggered the same WAN failover used earlier. The ICMP tests above had suggested a sub-second-to-a-few-second disruption. What actually happened to the Teams call was very different: it took an average of **around 20 seconds** for the call to reconnect.
+
+That gap between "ping recovers almost instantly" and "a real call takes 20 seconds" is exactly what the earlier section predicted in theory — `ses_pickup: disable` means the secondary unit has no record of the session that was active on the primary, so a live call isn't handed off, it's dropped and has to renegotiate from scratch. ICMP never exposed that, because ICMP never had a session to lose in the first place.
+
+Once the 20-second reconnect flagged that something was worth investigating, I went back into the HA configuration and found session pickup toggled off — consistent with everything documented above. I enabled it, re-applied the HA configuration, and re-ran the identical WAN failover test with the same Teams call running:
+
+**Reconnect time dropped to under 2 seconds.**
+
+That single change is the clearest evidence in this entire lab for why config sync and session sync are genuinely different guarantees, not two names for the same thing. Configuration sync was `in-sync` and instant for every test in this write-up, start to finish — and none of that mattered for how long a real call was disrupted. The setting that actually controlled the user-facing outcome was one line, off by default in this build, that the ICMP tests had no way of exposing.
+
+| | Session pickup disabled (as configured throughout this lab) | Session pickup enabled |
+|---|---|---|
+| Test method | Live Microsoft Teams call, WAN failover triggered | Same — live Teams call, same failover trigger |
+| Reconnect time | ~20 seconds average | Under 2 seconds |
+| What this shows | Confirms the "stateless for sessions" theory from the CLI output — with real evidence, not just a config flag | Session pickup is doing exactly what it's documented to do: carrying live session state across the transition |
+
+## What Changed Because of This
+
+Session pickup is now enabled on this cluster, and the WAN-failover ICMP test earlier in this document reflects the original, `ses_pickup: disable` configuration this lab was built and documented under — the numbers there haven't been re-measured against the new setting, and I'm leaving them as-is rather than re-writing history. The honest way to read this document, top to bottom, is: this is what a well-built HA cluster looks like *before* session pickup is considered, and this section is what changed once a real usage pattern — not a synthetic ping — exposed why that setting matters.
+
 ## Validation Matrix
 
 | Test | Expected Result | Actual Result | Status |
@@ -223,10 +247,14 @@ The headline comparison isn't "1 dropped ping vs. 5 dropped pings for the same k
 | FW1 WAN link failback | FW1 reclaims primary | 2 timeouts + unreachable, then recovery | PASS |
 | FW1 power-off failover | FW2 becomes primary | Confirmed via FW2 HA status log (heartbeat lost) — no isolated ping-loss count captured | PASS |
 | FW1 power-on failback | FW1 resyncs and reclaims primary | 5 packets lost | PASS |
+| Live Teams call across WAN failover — session pickup disabled | Brief, low-impact reconnect | ~20 seconds to reconnect | FAIL (informative — confirmed stateless session behavior) |
+| Live Teams call across WAN failover — session pickup enabled | Fast, low-impact reconnect | Under 2 seconds | PASS |
 
 ## What I Learned
 
 HA isn't really about eliminating downtime — it's about controlling what kind of downtime you get, how long it lasts, and how visible its recovery is. The biggest thing I had to correct in my own thinking while writing this up was collapsing "FW1 fails" and "FW1 comes back" into a single measurement — they're different transitions, triggered differently, and only one of them (the return) actually left a clean packet-loss number in this data set. A monitored-interface failure and a full-unit failure are detected on different planes entirely, and a failback after a full reboot is a rougher event than a live unit losing one link, simply because there's more state to rebuild before the returning unit can be trusted again. Watching `Destination host unreachable` appear mid-recovery, or seeing a rejoining unit sit visibly red and "Out of sync," told me more about how FortiGate HA actually works than a green checkmark on a calm day ever could. And `ses_pickup: disable` in the CLI output taught me to keep two claims separate rather than merging them: the ICMP packet loss in these tests is evidence of the HA transition itself, while session pickup is a distinct guarantee that only matters for stateful protocols like TCP — conflating the two would have been an easy, and wrong, shortcut.
+
+The lesson that actually landed hardest, though, came after I stopped trusting ICMP as a stand-in for real usage. Nobody pings a gateway all day — but people do sit on calls — and testing an actual Teams call across the same failover turned a theoretical 15-word CLI setting into a measured 20-second business problem, then back into a 2-second non-event once session pickup was enabled. That's the difference between documenting a feature and validating one.
 
 ## Interview Questions
 
@@ -242,11 +270,14 @@ It's important to be precise about what those two numbers actually measure, beca
 **Q4. What does "Out of sync" actually mean when a unit rejoins the cluster?**
 It means the rejoining unit is present and communicating over the heartbeat, but its configuration hasn't yet been confirmed to match the rest of the cluster. It's a safety state — the cluster won't treat a device as a full member again until configuration sync is confirmed, which protects against a stale or partially-recovered unit taking over traffic prematurely.
 
-**Q5. Was this cluster's failover stateful or stateless?**
-Stateless, for session continuity specifically — `ses_pickup: disable` in the CLI output confirms session pickup wasn't enabled, so active sessions on the primary weren't mirrored to the secondary in real time. Configuration sync (interfaces, policies, routes) is a separate mechanism and was working correctly throughout — `Configuration Status: in-sync` — but that only means the two units agree on *policy*, not that in-flight connections survived the handoff. That distinction is exactly what shows up as the packet loss and re-establishment behavior in both failover tests.
+**Q5. Was this cluster's failover stateful or stateless — and does it actually matter?**
+Originally stateless for session continuity: `ses_pickup: disable` in the CLI output confirmed session pickup wasn't enabled, so active sessions on the primary weren't mirrored to the secondary in real time. Configuration sync (interfaces, policies, routes) is a separate mechanism and was working correctly throughout — `Configuration Status: in-sync` — but that only means the two units agree on *policy*, not that in-flight connections survived the handoff. Whether that distinction actually matters was answered directly rather than left as theory: a live Microsoft Teams call across the same WAN failover took roughly 20 seconds to reconnect with session pickup off, and dropped to under 2 seconds once it was enabled. Config sync alone never would have predicted that gap — it took testing a real stateful session to expose it.
 
 **Q6. Why is Port1 addressed manually instead of by DHCP on an HA pair?**
 I used a static WAN address because this lab has a fixed upstream network, and the firewall's routing, NAT, and policy configuration all depend on a stable, known WAN address to be written against. DHCP isn't inherently incompatible with HA — but static addressing is the clearer, more predictable choice for a controlled lab environment like this one, where the upstream topology doesn't change.
+
+**Q7. Why isn't a continuous ping enough to validate HA failover for a production network?**
+Because ICMP doesn't have session state to lose, so it can't reveal anything about session pickup one way or the other — a ping will look fine on a stateless cluster and a stateful one alike. In this lab that gap wasn't hypothetical: the ICMP tests suggested a fast, low-impact recovery, but a live Teams call across the identical failover took roughly 20 seconds to reconnect with session pickup disabled. Validating HA for a real environment means testing the kind of traffic that environment actually depends on — voice, video, or long-lived TCP sessions — not just confirming that the gateway answers pings again quickly.
 
 ---
 
