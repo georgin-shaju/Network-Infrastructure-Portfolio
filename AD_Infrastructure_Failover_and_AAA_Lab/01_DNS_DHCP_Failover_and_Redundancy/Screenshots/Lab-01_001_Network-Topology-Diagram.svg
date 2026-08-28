@@ -1,0 +1,96 @@
+<svg width="1000" height="660" viewBox="0 0 1000 660" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Lab topology: Internet, router, L3 switch, four VLANs, and access point</title>
+<desc>Internet connects to a NAT router, which connects to an L3 switch. The switch fans out to four VLANs: VLAN10 management (ESXi host and iLO), VLAN20 (DC01, NPS1), VLAN30 (DC02, NPS2), and VLAN40 clients. An Aironet access point trunks to the switch carrying VLAN10 and VLAN40, and both DC01 and DC02 serve as RADIUS servers for the switch and access point.</desc>
+<rect width="1000" height="660" fill="#ffffff"/>
+
+<!-- Internet -->
+<ellipse cx="500" cy="45" rx="90" ry="30" fill="#f8d7da" stroke="#842029" stroke-width="1"/>
+<text x="500" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#5c1a20">Internet</text>
+
+<!-- Router -->
+<rect x="430" y="105" width="140" height="50" rx="8" fill="#f8d7da" stroke="#842029" stroke-width="1"/>
+<text x="500" y="125" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#5c1a20">Cisco Router</text>
+<text x="500" y="143" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#5c1a20">NAT</text>
+
+<line x1="500" y1="75" x2="500" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- L3 Switch -->
+<rect x="410" y="195" width="180" height="55" rx="8" fill="#e2e3e5" stroke="#41464b" stroke-width="1"/>
+<text x="500" y="217" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2b2f32">L3 Switch</text>
+<text x="500" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#2b2f32">SVI gateways, trunking</text>
+
+<line x1="500" y1="155" x2="500" y2="195" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Access Point (off to the right) -->
+<rect x="790" y="195" width="160" height="55" rx="8" fill="#d1e7dd" stroke="#0f5132" stroke-width="1"/>
+<text x="870" y="217" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#0a3622">Aironet 1815</text>
+<text x="870" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#0a3622">Mobility Express</text>
+<line x1="590" y1="222" x2="790" y2="222" stroke="#555" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<text x="690" y="213" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#333">Gi0/6 trunk</text>
+<text x="690" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">native VLAN10, allowed 10,40</text>
+
+<!-- Four VLAN containers -->
+<!-- VLAN10 -->
+<rect x="40" y="320" width="210" height="180" rx="12" fill="#fff3cd" stroke="#997404" stroke-width="1"/>
+<text x="145" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#664d03">VLAN 10 — Management</text>
+<text x="145" y="362" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#664d03">192.168.10.0/28</text>
+<rect x="60" y="378" width="170" height="42" rx="6" fill="#ffffff" stroke="#997404" stroke-width="0.75"/>
+<text x="145" y="396" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#333">ESXi host — 192.168.10.2</text>
+<text x="145" y="412" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">vmk0 management</text>
+<rect x="60" y="428" width="170" height="42" rx="6" fill="#ffffff" stroke="#997404" stroke-width="0.75"/>
+<text x="145" y="446" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#333">HPE iLO — 192.168.10.3</text>
+<text x="145" y="462" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">out-of-band mgmt</text>
+
+<!-- VLAN20 -->
+<rect x="280" y="320" width="210" height="180" rx="12" fill="#cfe2ff" stroke="#084298" stroke-width="1"/>
+<text x="385" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#052c65">VLAN 20 — DC01</text>
+<text x="385" y="362" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#052c65">192.168.20.0/28</text>
+<rect x="300" y="378" width="170" height="92" rx="6" fill="#ffffff" stroke="#084298" stroke-width="0.75"/>
+<text x="385" y="398" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#333">DC01 — 192.168.20.2</text>
+<text x="385" y="415" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">AD DS · DNS · DHCP (active)</text>
+<text x="385" y="431" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">Root CA · NPS1 (priority 1)</text>
+
+<!-- VLAN30 -->
+<rect x="520" y="320" width="210" height="180" rx="12" fill="#cfe2ff" stroke="#084298" stroke-width="1"/>
+<text x="625" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#052c65">VLAN 30 — DC02</text>
+<text x="625" y="362" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#052c65">192.168.30.0/28</text>
+<rect x="540" y="378" width="170" height="92" rx="6" fill="#ffffff" stroke="#084298" stroke-width="0.75"/>
+<text x="625" y="398" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#333">DC02 — 192.168.30.2</text>
+<text x="625" y="415" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">AD DS · DNS · DHCP (standby)</text>
+<text x="625" y="431" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">NPS2 (priority 2)</text>
+
+<!-- VLAN40 -->
+<rect x="760" y="320" width="200" height="180" rx="12" fill="#d1e7dd" stroke="#0f5132" stroke-width="1"/>
+<text x="860" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#0a3622">VLAN 40 — Clients</text>
+<text x="860" y="362" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#0a3622">192.168.40.0/28</text>
+<rect x="780" y="378" width="160" height="42" rx="6" fill="#ffffff" stroke="#0f5132" stroke-width="0.75"/>
+<text x="860" y="396" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#333">PC01 — DHCP</text>
+<text x="860" y="412" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">gateway 192.168.40.1</text>
+
+<!-- Switch to VLANs -->
+<line x1="460" y1="250" x2="145" y2="320" stroke="#555" stroke-width="1"/>
+<line x1="480" y1="250" x2="385" y2="320" stroke="#555" stroke-width="1"/>
+<line x1="520" y1="250" x2="625" y2="320" stroke="#555" stroke-width="1"/>
+<line x1="540" y1="250" x2="860" y2="320" stroke="#555" stroke-width="1"/>
+
+<!-- RADIUS dashed lines from DC01/DC02 to switch and AP -->
+<path d="M 385 378 C 385 260, 500 250, 500 250" fill="none" stroke="#0f5132" stroke-width="1" stroke-dasharray="4 3"/>
+<path d="M 625 378 C 625 260, 500 250, 500 250" fill="none" stroke="#0f5132" stroke-width="1" stroke-dasharray="4 3"/>
+<path d="M 385 378 C 500 300, 700 260, 870 250" fill="none" stroke="#0f5132" stroke-width="1" stroke-dasharray="4 3"/>
+<path d="M 625 378 C 700 300, 800 260, 870 250" fill="none" stroke="#0f5132" stroke-width="1" stroke-dasharray="4 3"/>
+
+<!-- Legend -->
+<rect x="40" y="540" width="920" height="90" rx="10" fill="#f8f9fa" stroke="#ccc" stroke-width="1"/>
+<text x="60" y="565" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">Legend</text>
+<line x1="60" y1="580" x2="90" y2="580" stroke="#555" stroke-width="1.5"/>
+<text x="98" y="584" font-family="Arial, sans-serif" font-size="11" fill="#333">Trunk / routed link</text>
+<line x1="260" y1="580" x2="290" y2="580" stroke="#0f5132" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="298" y="584" font-family="Arial, sans-serif" font-size="11" fill="#333">RADIUS (both DCs configured on switch and AP)</text>
+<text x="60" y="608" font-family="Arial, sans-serif" font-size="11" fill="#666">DC01 and DC02 both run AD DS, DNS, DHCP (hot-standby failover), and NPS — either can serve the environment if the other fails.</text>
+
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+</svg>
