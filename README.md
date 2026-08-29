@@ -13,6 +13,7 @@ Most of this training happened the way IT training usually does — simulators f
 
 - VMware ESXi 8.0 deployment on a physical HPE ProLiant DL360 Gen9 enterprise server
 - Windows Server 2019 administration — Active Directory, DNS, DHCP, Group Policy, OU/User management
+- Windows Server 2025 infrastructure failover — two-DC Active Directory with DHCP hot-standby failover and DNS redundancy, Certificate Services, and RADIUS/NPS-based AAA for switch SSH and WPA2-Enterprise Wi-Fi (PEAP and EAP-TLS), including a real AD replication fault found and fixed mid-lab
 - Cisco switching and routing in Packet Tracer — VLANs, SSH, Spanning Tree Protocol, Inter-VLAN Routing (SVI and Router-on-a-Stick), Static Routing
 - Cisco switching and routing on real hardware — a Cisco 1921 ISR router and Catalyst 3560-CX Layer 3 switch, console cable and all, covering NAT, SSH hardening, VLANs, DHCP, and an inter-VLAN ACL security policy
 - Layer 3 switching redundancy on real hardware — two Catalyst 3850s in a StackWise stack acting as the L3 gateway, with dual LACP EtherChannels, SPAN-based NOC traffic monitoring, and four real failover tests including a full active-member power-off
@@ -28,7 +29,7 @@ Most of this training happened the way IT training usually does — simulators f
 
 This portfolio spans three separate environments, not one continuous setup:
 
-- **Physical hardware** — VMware ESXi installed bare-metal on a real **HPE ProLiant DL360 Gen9** server, accessed via iLO. Covers initial hypervisor install and VM deployment only.
+- **Physical hardware** — VMware ESXi installed bare-metal on a real **HPE ProLiant DL360 Gen9** server, accessed via iLO. Initial coverage was hypervisor install and VM deployment only; the AD Infrastructure Failover & AAA Lab later built two Windows Server 2025 VMs on this same ESXi host for a full multi-DC AD/DNS/DHCP/RADIUS deployment.
 - **Native Windows Server machine** — Active Directory through Group Policy was first completed on a separate physical machine, booted directly into Windows Server (not virtualized).
 - **VirtualBox** — the same AD-through-GPO scope was repeated here for additional practice. This is the round documented with screenshots in this repository.
 
@@ -41,15 +42,16 @@ Separately, the Cisco Real Hardware, firewall, HA cluster, wireless, and protoco
 | # | Project | Description | Status |
 |---|---|---|---|
 | 1 | [Windows Server & ESXi Lab](Windows_Server/) | 6 labs — ESXi setup · AD DS · DNS · DHCP · GPO · OU & User Management | ✅ Complete |
-| 2 | [Cisco Networking Labs](Cisco_Labs/) | 5 labs (Packet Tracer) — VLANs/SSH · STP · Inter-VLAN Routing (SVI + ROAS) · Static Routing | ✅ Complete |
-| 3 | [Cisco Real Hardware](Cisco_Real_Hardware/) | 2 volumes — Cisco 1921 ISR router baseline, Catalyst 3560-CX VLANs/DHCP/ACL security | ✅ Complete |
-| 4 | [Cisco 3850 StackWise Lab](Cisco_3850_StackWise_Lab/) | Real-hardware Catalyst 3850 StackWise pair as L3 gateway — dual LACP EtherChannels, SPAN-based NOC monitoring, 4 live failover tests incl. full active-member power-off | ✅ Complete |
-| 5 | [Endian Firewall Lab](Endian_Firewall_Lab/) | Real-hardware UTM firewall — RED/GREEN segmentation, rule ordering, proxy, web filtering | ✅ Complete |
-| 6 | [FortiGate 300D Hardware Lab](FortiGate-300D-Hardware-Lab/) | Real-hardware NGFW — GUI-based interfaces, static routing, firewall policy with NAT, DHCP | ✅ Complete |
-| 7 | [FortiGate Active-Passive HA Deployment & Failover Testing](FortiGate_Active-Passive-HA-Failover/) | 2× FortiGate 300D Active-Passive HA cluster — dedicated heartbeat, WAN-link and power failure testing with validation matrix | ✅ Complete |
-| 8 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
-| 9 | [Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/) | 6 live packet-capture labs — ARP resolution · ICMP TTL · TCP handshake · DNS/UDP · switch MAC learning | ✅ Complete |
-| 10 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
+| 2 | [AD Infrastructure Failover & AAA Lab](AD_Infrastructure_Failover_and_AAA_Lab/) | Two-DC Windows Server 2025 — AD DS/DNS/DHCP hot-standby failover plus RADIUS/NPS AAA for switch SSH and WPA2-Enterprise Wi-Fi (PEAP + EAP-TLS) — includes a real AD replication fault found and fixed mid-lab | ✅ Complete |
+| 3 | [Cisco Networking Labs](Cisco_Labs/) | 5 labs (Packet Tracer) — VLANs/SSH · STP · Inter-VLAN Routing (SVI + ROAS) · Static Routing | ✅ Complete |
+| 4 | [Cisco Real Hardware](Cisco_Real_Hardware/) | 2 volumes — Cisco 1921 ISR router baseline, Catalyst 3560-CX VLANs/DHCP/ACL security | ✅ Complete |
+| 5 | [Cisco 3850 StackWise Lab](Cisco_3850_StackWise_Lab/) | Real-hardware Catalyst 3850 StackWise pair as L3 gateway — dual LACP EtherChannels, SPAN-based NOC monitoring, 4 live failover tests incl. full active-member power-off | ✅ Complete |
+| 6 | [Endian Firewall Lab](Endian_Firewall_Lab/) | Real-hardware UTM firewall — RED/GREEN segmentation, rule ordering, proxy, web filtering | ✅ Complete |
+| 7 | [FortiGate 300D Hardware Lab](FortiGate-300D-Hardware-Lab/) | Real-hardware NGFW — GUI-based interfaces, static routing, firewall policy with NAT, DHCP | ✅ Complete |
+| 8 | [FortiGate Active-Passive HA Deployment & Failover Testing](FortiGate_Active-Passive-HA-Failover/) | 2× FortiGate 300D Active-Passive HA cluster — dedicated heartbeat, WAN-link and power failure testing with validation matrix | ✅ Complete |
+| 9 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
+| 10 | [Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/) | 6 live packet-capture labs — ARP resolution · ICMP TTL · TCP handshake · DNS/UDP · switch MAC learning | ✅ Complete |
+| 11 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
 
 ---
 
@@ -63,6 +65,17 @@ Separately, the Cisco Real Hardware, firewall, HA cluster, wireless, and protoco
 | [04](Windows_Server/04_DHCP_Configuration/) | DHCP Server Configuration | IPv4 scope · scope options · server authorization · lease verification |
 | [05](Windows_Server/05_Group_Policy_Objects/) | Group Policy Objects | Logon banner · wallpaper · password policy · security filtering |
 | [06](Windows_Server/06_OU_Users_Groups_Management/) | OUs, Users & Groups | OU design · user creation · security groups · ADUC · domain join verification |
+
+---
+
+## AD Infrastructure Failover & AAA Lab
+
+**[AD Infrastructure Failover & AAA Lab](AD_Infrastructure_Failover_and_AAA_Lab/)**
+Two Windows Server 2025 domain controllers, built specifically to test the coordination problems a single-DC lab never has to face — DHCP hot-standby failover, DNS redundancy, and the AD replication issues that come from getting either wrong. A real AD replication fault (error 8524) surfaced during testing, got traced to a missing alternate DNS entry and a missing reverse lookup zone, and the fix was reverified with a genuine DC-down test: DC01 powered off at the host level, a client still resolving names and holding a lease through DC02 alone.
+
+On top of that foundation, centralized RADIUS authentication (NPS running on both DCs) handles switch admin SSH access and WPA2-Enterprise Wi-Fi, with a later addition swapping the wireless method from password-based PEAP to certificate-based EAP-TLS, distributed automatically via Group Policy autoenrollment rather than installed by hand. Every failover claim in this lab — DHCP, DNS, switch RADIUS, and Wi-Fi RADIUS — is backed by an actual outage test rather than a configuration screenshot, with the surviving server's own security event log used as independent corroboration each time.
+
+![Switch debug output showing RADIUS failover from DC01 to DC02 mid-session, with Access-Accept from the surviving DC](AD_Infrastructure_Failover_and_AAA_Lab/02_NPS_Certificate_Services_AAA_SSH_and_WiFi_8021X/Screenshots/Lab-02_013_SSH-Debug-Failover-to-DC02-Access-Accept.png)
 
 ---
 
@@ -226,6 +239,7 @@ common scenarios from hardware fundamentals through Cisco routing.
 | **Virtualisation** | VMware ESXi 8.0, vSphere Host Client, VM deployment |
 | **Server Hardware** | HPE ProLiant DL360 Gen9, iLO 4, hardware RAID |
 | **Windows Server** | Windows Server 2019, AD DS, DNS, DHCP, GPO, Domain Controller |
+| **AD Infrastructure & RADIUS AAA** | Windows Server 2025, multi-DC AD DS replication, DHCP hot-standby failover, DNS redundancy, Certificate Services (AD CS), NPS/RADIUS, PEAP-MSCHAPv2, EAP-TLS, WPA2-Enterprise, 802.1X, GPO certificate autoenrollment |
 | **Cisco Switching & Routing** | VLANs, SVI, SSH, STP, Router-on-a-Stick, Static Routing, Extended ACLs |
 | **Cisco Real Hardware** | Cisco 1921 ISR, Catalyst 3560-CX, NAT overload, DHCP snooping, DAI, port security |
 | **Cisco StackWise & EtherChannel** | Catalyst 3850 StackWise stacking, LACP EtherChannel, SPAN traffic mirroring, VLAN1 transit design, stack-power ring |
@@ -260,6 +274,8 @@ common scenarios from hardware fundamentals through Cisco routing.
 - Config sync and session sync are two different guarantees on a FortiGate HA cluster — `Configuration Status: in-sync` only means policy matches between units, not that in-flight sessions would survive a failover; that second guarantee is controlled separately by session pickup
 - A StackWise stack's hostname belongs to the stack as a logical entity, not to whichever physical unit currently holds the Active role — powering off the Active member entirely didn't drop the console session, because the Standby member took over Active and kept answering under the same identity
 - "Zero dropped pings" during a failover test isn't the same claim as "zero downtime" — a `ping -t` at a one-second interval only rules out outages roughly that long or longer, so it's honest evidence against a user-visible outage, not proof of a perfectly instantaneous transition
+- AD replication's dependency on DNS runs in more directions than the one you interact with day to day — the forward zone is what you query every day, but replication's own health checks depend on reverse resolution too, and it's easy to leave that unbuilt since nothing looks broken until you specifically test it
+- Authentication and network placement are two separate concerns in 802.1X, controlled by systems that don't know about each other — RADIUS deciding whether to grant access and a device's VLAN mapping deciding where it lands can each be exactly right while the other is silently wrong, and checking a client's actual address is what catches it
 
 ---
 
