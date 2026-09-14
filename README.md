@@ -17,15 +17,16 @@ Most of this training happened the way IT training usually does — simulators f
 - Cisco switching and routing in Packet Tracer — VLANs, SSH, Spanning Tree Protocol, Inter-VLAN Routing (SVI and Router-on-a-Stick), Static Routing
 - Cisco switching and routing on real hardware — a Cisco 1921 ISR router and Catalyst 3560-CX Layer 3 switch, console cable and all, covering NAT, SSH hardening, VLANs, DHCP, and an inter-VLAN ACL security policy
 - Layer 3 switching redundancy on real hardware — two Catalyst 3850s in a StackWise stack acting as the L3 gateway, with dual LACP EtherChannels, SPAN-based NOC traffic monitoring, and four real failover tests including a full active-member power-off
-- Firewall and UTM appliances on real hardware — Endian Firewall Community and a FortiGate 300D NGFW, covering zone-based segmentation, firewall policy, proxying, and web filtering
+- Firewall and UTM appliances on real hardware — Endian Firewall Community and a FortiGate 300D NGFW, covering zone-based segmentation, firewall policy, proxying, web filtering, virtual IPs, and U-turn NAT
+- FortiGate hairpin NAT with Windows IIS — an internal client reaches a server on the same LAN through its WAN-side VIP, with policy counters and paired Wireshark captures proving both destination and source translation
 - Firewall redundancy on real hardware — two FortiGate 300D units in an Active-Passive HA cluster, tested against real WAN-link and full-power failures rather than just configured and left alone
 - Wireless on real hardware — a Cisco Aironet 1815 Mobility Express AP built from a factory reset, covering the console day-0 wizard, employee WLAN, and a guest network with captive portal redirect
-- Protocol analysis on live traffic — Wireshark captures of ARP resolution, ICMP TTL behaviour, the TCP three-way handshake, DNS over UDP, and Cisco switch MAC address learning, watched packet-by-packet rather than read about
+- Protocol analysis on live traffic — Wireshark captures of ARP resolution, ICMP TTL behaviour, the TCP three-way handshake, DNS over UDP, Cisco switch MAC address learning, and NAT translation watched packet-by-packet rather than read about
 - Structured incident troubleshooting — 5 detailed case studies plus a quick-reference guide spanning hardware, OS, networking, AD, and Cisco topics
 
 ---
 
-##  Lab Environment Note
+## Lab Environment Note
 
 This portfolio spans three separate environments, not one continuous setup:
 
@@ -33,7 +34,7 @@ This portfolio spans three separate environments, not one continuous setup:
 - **Native Windows Server machine** — Active Directory through Group Policy was first completed on a separate physical machine, booted directly into Windows Server (not virtualized).
 - **VirtualBox** — the same AD-through-GPO scope was repeated here for additional practice. This is the round documented with screenshots in this repository.
 
-Separately, the Cisco Real Hardware, firewall, HA cluster, wireless, and protocol analysis labs below were built on their own dedicated physical devices — a router, switches, firewall appliances, an access point, and a live-captured switch/PC pair — outside of any of the three environments above.
+Separately, the Cisco Real Hardware, firewall, HA cluster, wireless, and protocol analysis labs below were built on their own dedicated physical devices — a router, switches, firewall appliances, an access point, Windows IIS hosts, and live-captured client/server pairs — outside of any of the three environments above.
 
 ---
 
@@ -48,10 +49,11 @@ Separately, the Cisco Real Hardware, firewall, HA cluster, wireless, and protoco
 | 5 | [Cisco 3850 StackWise Lab](Cisco_3850_StackWise_Lab/) | Real-hardware Catalyst 3850 StackWise pair as L3 gateway — dual LACP EtherChannels, SPAN-based NOC monitoring, 4 live failover tests incl. full active-member power-off | ✅ Complete |
 | 6 | [Endian Firewall Lab](Endian_Firewall_Lab/) | Real-hardware UTM firewall — RED/GREEN segmentation, rule ordering, proxy, web filtering | ✅ Complete |
 | 7 | [FortiGate 300D Hardware Lab](FortiGate-300D-Hardware-Lab/) | Real-hardware NGFW — GUI-based interfaces, static routing, firewall policy with NAT, DHCP | ✅ Complete |
-| 8 | [FortiGate Active-Passive HA Deployment & Failover Testing](FortiGate_Active-Passive-HA-Failover/) | 2× FortiGate 300D Active-Passive HA cluster — dedicated heartbeat, WAN-link and power failure testing with validation matrix | ✅ Complete |
-| 9 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
-| 10 | [Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/) | 6 live packet-capture labs — ARP resolution · ICMP TTL · TCP handshake · DNS/UDP · switch MAC learning | ✅ Complete |
-| 11 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
+| 8 | [FortiGate Hairpin NAT with Windows IIS](HairpinNAT/) | U-turn NAT through an HTTP VIP — direct, external, failed internal, and successful hairpin tests verified with policy counters and paired packet captures | ✅ Complete |
+| 9 | [FortiGate Active-Passive HA Deployment & Failover Testing](FortiGate_Active-Passive-HA-Failover/) | 2× FortiGate 300D Active-Passive HA cluster — dedicated heartbeat, WAN-link and power failure testing with validation matrix | ✅ Complete |
+| 10 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
+| 11 | [Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/) | 6 live packet-capture labs — ARP resolution · ICMP TTL · TCP handshake · DNS/UDP · switch MAC learning | ✅ Complete |
+| 12 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
 
 ---
 
@@ -118,13 +120,20 @@ Four real resiliency tests were run against the finished build rather than just 
 
 ## Firewall & UTM — Real Hardware
 
-Two firewall appliances, two very different interaction models — one almost entirely CLI/console-driven at the point of recovery, the other entirely GUI-based from power-on to policy.
+Two firewall platforms, three different problem sets: one appliance was recovered and configured mainly from its local console, while the FortiGate work moved from basic GUI policy/NAT into an internal U-turn path that had to be proven from both sides of the translation.
 
 **[Endian Firewall Community 3.3.2](Endian_Firewall_Lab/)**
 Installed on a repurposed PC (Intel i3, 8GB RAM, dual Intel NICs for RED/GREEN), configured as a gateway between a lab router and a client laptop. Covers the installer, a real GUI-unreachable snag recovered through the console Network Configuration Wizard, outbound firewall rule ordering, HTTP proxy, and web filtering with category blocking scoped to a specific client.
 
 **[FortiGate 300D](FortiGate-300D-Hardware-Lab/)**
 A next-gen firewall configured entirely through the browser — LAN/WAN interface roles, a default static route, a firewall policy bundling access control and NAT together, and DHCP switched on for the internal segment. Written up as a direct comparison to the router-based CLI work above: same underlying concepts, different interface.
+
+**[FortiGate 300D U-Turn (Hairpin) NAT with Windows IIS](HairpinNAT/)**
+The ordinary VIP path worked first: a WAN-side client at `172.18.2.5` reached an IIS server at `192.168.18.100` through `172.18.2.11:80`. The internal client at `192.168.18.10` could also reach the server directly, but timed out when it requested that same VIP. That test order narrowed the fault to the internal U-turn path before any policy was changed.
+
+After the same-interface hairpin policy was added, the internal request completed with `HTTP/1.1 200 OK`. The evidence goes beyond a successful browser page: the matching policy counter increased, the failed capture shows a SYN followed by four unanswered retransmissions, and paired endpoint captures use the same source port to connect both views of the successful session. PC2 sees `192.168.18.10` talking to `172.18.2.11`; IIS sees `192.168.18.1` talking to `192.168.18.100`. That proves DNAT to the real server and SNAT to the FortiGate LAN address rather than merely showing that the page eventually loaded.
+
+![Internal client loading the IIS page successfully through the external VIP after the hairpin policy was added](HairpinNAT/Screenshots/22-After-Hairpin-VIP-Access-Success.png)
 
 ---
 
@@ -224,6 +233,14 @@ common scenarios from hardware fundamentals through Cisco routing.
 
 ---
 
+### FortiGate Hairpin NAT — Server-Side Translation
+
+> Matching endpoint captures prove the successful internal VIP request was both destination- and source-translated
+
+![IIS-side hairpin NAT packet capture](HairpinNAT/Screenshots/29-After-Hairpin-IIS-Server-Capture.png)
+
+---
+
 ### Perimeter Firewall Redundancy — Failback Mid-Recovery
 
 > FW2 stays green and Primary while FW1 rejoins visibly red and "Out of sync"
@@ -238,17 +255,17 @@ common scenarios from hardware fundamentals through Cisco routing.
 |---|---|
 | **Virtualisation** | VMware ESXi 8.0, vSphere Host Client, VM deployment |
 | **Server Hardware** | HPE ProLiant DL360 Gen9, iLO 4, hardware RAID |
-| **Windows Server** | Windows Server 2019, AD DS, DNS, DHCP, GPO, Domain Controller |
+| **Windows Server** | Windows Server 2019, AD DS, DNS, DHCP, GPO, Domain Controller, IIS |
 | **AD Infrastructure & RADIUS AAA** | Windows Server 2025, multi-DC AD DS replication, DHCP hot-standby failover, DNS redundancy, Certificate Services (AD CS), NPS/RADIUS, PEAP-MSCHAPv2, EAP-TLS, WPA2-Enterprise, 802.1X, GPO certificate autoenrollment |
 | **Cisco Switching & Routing** | VLANs, SVI, SSH, STP, Router-on-a-Stick, Static Routing, Extended ACLs |
 | **Cisco Real Hardware** | Cisco 1921 ISR, Catalyst 3560-CX, NAT overload, DHCP snooping, DAI, port security |
 | **Cisco StackWise & EtherChannel** | Catalyst 3850 StackWise stacking, LACP EtherChannel, SPAN traffic mirroring, VLAN1 transit design, stack-power ring |
-| **Firewalls / UTM** | Endian Firewall Community, FortiGate/FortiOS, zone-based segmentation, HTTP proxy, web filtering |
+| **Firewalls / UTM** | Endian Firewall Community, FortiGate/FortiOS, zone-based segmentation, firewall policies, HTTP proxy, web filtering, VIPs, port forwarding, hairpin NAT, DNAT/SNAT |
 | **High Availability** | FortiGate FGCP Active-Passive clustering, heartbeat/monitor interfaces, override priority election, config sync vs. session pickup |
 | **Wireless** | Cisco Aironet 1815 (Mobility Express), WLAN/SSID configuration, WPA2-Personal, guest networking, captive portal |
-| **Protocol Analysis** | Wireshark, ARP resolution, ICMP/TTL, TCP three-way handshake, DNS over UDP, switch MAC learning |
+| **Protocol Analysis** | Wireshark, ARP resolution, ICMP/TTL, TCP handshakes and retransmissions, DNS over UDP, HTTP response analysis, NAT tuple correlation, switch MAC learning |
 | **Networking Fundamentals** | TCP/IP, OSI Model, Subnetting, Ethernet, Structured Cabling |
-| **Troubleshooting** | OSI layer-by-layer methodology, Windows Server, Cisco CLI, firewall GUIs |
+| **Troubleshooting** | OSI layer-by-layer methodology, baseline testing, Windows Server, Cisco CLI, firewall GUIs, policy counters, endpoint packet-capture correlation |
 | **Tools** | Cisco Packet Tracer, VirtualBox, PuTTY, Wireshark, draw.io |
 
 ---
@@ -267,6 +284,8 @@ common scenarios from hardware fundamentals through Cisco routing.
 - Adding a new subnet behind a NAT router means the NAT ACL needs updating too — nothing warns you when it's incomplete, and the symptom (DHCP working, no internet) looks identical to several other faults
 - An extended ACL's implicit `deny ip any any` is invisible but always there — forgetting a trailing `permit` silently kills traffic that was never meant to be blocked
 - CLI and GUI firewalls are the same concepts wearing different skins — interface roles, static routes, and policy/NAT bundling transfer directly from router CLI work to a browser-based NGFW
+- A working VIP from outside does not prove that the same address will work from inside — the destination can be identical while the FortiGate sees a different incoming interface, route decision, and policy path
+- A configuration screen shows intent, a policy counter shows which rule actually matched, and paired packet captures show what the firewall changed; all three together make a much stronger NAT claim than a successful browser page alone
 - A captive portal's self-signed certificate warning on a guest network isn't a fault — it's expected for an internal virtual gateway address unless a trusted certificate has been installed separately
 - Client-tracking features like Local Profiling on a guest WLAN aren't free — they can leave a client tagged in ways that affect its access even after it reconnects to a trusted network, which is worth testing for before relying on a guest/employee split for real isolation
 - A device doesn't need an IP-to-MAC mapping handed to it — it broadcasts an ARP request the moment it needs one, and a switch builds its own MAC address table the same passive way, just by watching source addresses go by
