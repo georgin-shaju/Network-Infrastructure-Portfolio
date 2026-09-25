@@ -21,6 +21,8 @@ Most of this training happened the way IT training usually does — simulators f
 - FortiGate hairpin NAT with Windows IIS — an internal client reaches a server on the same LAN through its WAN-side VIP, with policy counters and paired Wireshark captures proving both destination and source translation
 - Firewall redundancy on real hardware — two FortiGate 300D units in an Active-Passive HA cluster, tested against real WAN-link and full-power failures rather than just configured and left alone
 - Wireless on real hardware — a Cisco Aironet 1815 Mobility Express AP built from a factory reset, covering the console day-0 wizard, employee WLAN, and a guest network with captive portal redirect
+- Cisco Meraki cloud-managed infrastructure on real hardware, from MS130-8P onboarding and FortiGate VLAN trunking to dual-MR36 wireless, guest access, Meraki DHCP, and client troubleshooting
+- Cisco ISE identity and access control, using EAP-TLS for certificate-based Meraki wireless access and TACACS+ for role-based Catalyst administration with command accounting
 - Protocol analysis on live traffic — Wireshark captures of ARP resolution, ICMP TTL behaviour, the TCP three-way handshake, DNS over UDP, Cisco switch MAC address learning, and NAT translation watched packet-by-packet rather than read about
 - Structured incident troubleshooting — 5 detailed case studies plus a quick-reference guide spanning hardware, OS, networking, AD, and Cisco topics
 
@@ -54,6 +56,9 @@ Separately, the Cisco Real Hardware, firewall, HA cluster, wireless, and protoco
 | 10 | [Cisco Aironet 1815 Wireless Lab](Cisco_Aironet_1815_Lab/) | Real-hardware AP — factory reset, day-0 wizard, employee WLAN, guest network with captive portal redirect | ✅ Complete |
 | 11 | [Wireshark Traffic Analysis](Wireshark_Traffic_Analysis/) | 6 live packet-capture labs — ARP resolution · ICMP TTL · TCP handshake · DNS/UDP · switch MAC learning | ✅ Complete |
 | 12 | [Troubleshooting Cases](Troubleshooting_Cases/) | 5 detailed incident case studies + quick-reference guide covering the full training journey | ✅ Complete |
+| 13 | [Cisco Meraki MS130-8P Onboarding and FortiGate Integration](Cisco-Meraki-MS130-8P-Onboarding-FortiGate-Integration/) | Real-hardware MS130-8P onboarding, 802.1Q trunking, FortiGate VLAN gateways, DHCP, firewall policy, NAT, and IT/HR client validation | ✅ Complete |
+| 14 | [Cisco Meraki MR36 Onboarding and Wireless Exploration](Cisco-Meraki-MR36-Onboarding-and-Wireless-Exploration/) | Two real MR36 access points, three access workflows, Meraki DHCP, client isolation, Dashboard monitoring, and connection troubleshooting | ✅ Complete |
+| 15 | [Cisco ISE Identity and Access Control](Cisco-ISE-Identity-and-Access-Control/) | Meraki EAP-TLS network access with dynamic VLAN assignment plus TACACS+ role-based Catalyst administration and command accounting | ✅ Complete |
 
 ---
 
@@ -152,6 +157,28 @@ Rather than configuring HA and calling it done, this one runs two real failure s
 
 **[Cisco Aironet 1815 Mobility Express](Cisco_Aironet_1815_Lab/)**
 A Cisco Aironet 1815 brought up from a genuine factory reset, PoE-powered off the same switch used in the Cisco Real Hardware labs, and placed straight on the main lab network with no VLAN segmentation. Covers the console day-0 setup wizard, first GUI login, an employee WLAN, and a guest WLAN with a captive portal that redirects authenticated guests to a real landing page. Includes a still-open troubleshooting thread on a guest client losing access to the management GUI after switching back to the trusted SSID.
+
+---
+
+## Cisco Meraki and Cisco ISE
+
+**[Cisco Meraki MS130-8P Onboarding and FortiGate Integration](Cisco-Meraki-MS130-8P-Onboarding-FortiGate-Integration/)**
+
+I started with the Meraki switching workflow by claiming an MS130-8P, adding it to the `Training-Trichy` network, and connecting it to a FortiGate 40F through an 802.1Q trunk. The FortiGate supplied the VLAN gateways, DHCP, firewall policy, and NAT. IT and HR clients were placed into separate VLANs and validated from DHCP lease through internet access.
+
+**[Cisco Meraki MR36 Onboarding and Wireless Exploration](Cisco-Meraki-MR36-Onboarding-and-Wireless-Exploration/)**
+
+The wireless phase added two MR36 access points and three client-access experiences: WPA2 pre-shared key, click-through splash access, and SMS authentication. It also compares local LAN addressing with Meraki DHCP, shows isolated `10.x.x.x` client addressing, and uses Dashboard client, event, and connection views to investigate DHCP and DNS failures.
+
+![Two Cisco Meraki MR36 access points connected to the lab switch](Cisco-Meraki-MR36-Onboarding-and-Wireless-Exploration/Screenshots/01-Two-Cisco-Meraki-MR36-Access-Points.jpeg)
+
+**[Cisco ISE Identity and Access Control](Cisco-ISE-Identity-and-Access-Control/)**
+
+The next step replaced shared wireless credentials with certificate-based access. Cisco ISE authenticated Meraki clients through EAP-TLS, checked endpoint-group membership, and returned different VLANs for approved IT and HR devices. A valid HR certificate was deliberately denied while its MAC address was absent from the approved group, then authorized for VLAN 20 after the endpoint was added.
+
+The same ISE deployment also controlled Catalyst administration through TACACS+. The full-access and read-only roles received different command sets, configuration access was denied for the read-only account, and ISE recorded authentication, authorization, command accounting, and wrong-password results.
+
+![Cisco ISE live logs showing IT and HR EAP-TLS authorization results](Cisco-ISE-Identity-and-Access-Control/01-Meraki-EAP-TLS-Network-Access/Screenshots/44-Cisco-ISE-Live-Logs-IT-and-HR-EAPTLS-Results.png)
 
 ---
 
@@ -262,7 +289,9 @@ common scenarios from hardware fundamentals through Cisco routing.
 | **Cisco StackWise & EtherChannel** | Catalyst 3850 StackWise stacking, LACP EtherChannel, SPAN traffic mirroring, VLAN1 transit design, stack-power ring |
 | **Firewalls / UTM** | Endian Firewall Community, FortiGate/FortiOS, zone-based segmentation, firewall policies, HTTP proxy, web filtering, VIPs, port forwarding, hairpin NAT, DNAT/SNAT |
 | **High Availability** | FortiGate FGCP Active-Passive clustering, heartbeat/monitor interfaces, override priority election, config sync vs. session pickup |
-| **Wireless** | Cisco Aironet 1815 (Mobility Express), WLAN/SSID configuration, WPA2-Personal, guest networking, captive portal |
+| **Wireless** | Cisco Aironet 1815 Mobility Express, Cisco Meraki MR36, Wi-Fi 6, WLAN/SSID configuration, WPA2-Personal, WPA2-Enterprise, guest networking, captive portals, Meraki DHCP, client isolation |
+| **Cisco Meraki Cloud** | Dashboard onboarding, MS130-8P, MR36, 802.1Q trunking, switch-port profiles, client monitoring, event logs, connection troubleshooting |
+| **Cisco ISE & Secure Access** | RADIUS, EAP-TLS, certificate authentication, endpoint groups, dynamic VLAN assignment, TACACS+, command authorization, command accounting |
 | **Protocol Analysis** | Wireshark, ARP resolution, ICMP/TTL, TCP handshakes and retransmissions, DNS over UDP, HTTP response analysis, NAT tuple correlation, switch MAC learning |
 | **Networking Fundamentals** | TCP/IP, OSI Model, Subnetting, Ethernet, Structured Cabling |
 | **Troubleshooting** | OSI layer-by-layer methodology, baseline testing, Windows Server, Cisco CLI, firewall GUIs, policy counters, endpoint packet-capture correlation |
@@ -295,6 +324,8 @@ common scenarios from hardware fundamentals through Cisco routing.
 - "Zero dropped pings" during a failover test isn't the same claim as "zero downtime" — a `ping -t` at a one-second interval only rules out outages roughly that long or longer, so it's honest evidence against a user-visible outage, not proof of a perfectly instantaneous transition
 - AD replication's dependency on DNS runs in more directions than the one you interact with day to day — the forward zone is what you query every day, but replication's own health checks depend on reverse resolution too, and it's easy to leave that unbuilt since nothing looks broken until you specifically test it
 - Authentication and network placement are two separate concerns in 802.1X, controlled by systems that don't know about each other — RADIUS deciding whether to grant access and a device's VLAN mapping deciding where it lands can each be exactly right while the other is silently wrong, and checking a client's actual address is what catches it
+- A valid EAP-TLS certificate proves identity, but it does not have to grant access by itself. Combining certificate checks with an approved endpoint group gave ISE a second authorization control
+- TACACS+ authentication answers whether an administrator can log in. Command authorization decides what that administrator can do, and accounting records what was actually attempted
 
 ---
 
